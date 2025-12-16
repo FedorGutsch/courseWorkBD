@@ -62,7 +62,7 @@ def dashboard():
             data['cars'] = cursor.fetchall()
             
             if role in ['director_boss', 'manager_sergey']:
-                cursor.execute("SELECT SUM(stoimost_obschaya) FROM rental_agreement WHERE status_oplaty = 'Оплачено'")
+                cursor.execute("SELECT SUM(stoimost_obschaya) FROM rental_agreement WHERE status_oplaty = 'Paid'")
                 data['revenue'] = cursor.fetchone()[0] or 0
                 cursor.execute("SELECT COUNT(*) FROM rental_agreement WHERE data_vozvrata_fact IS NULL")
                 data['active_rentals_count'] = cursor.fetchone()[0]
@@ -117,7 +117,7 @@ def handle_action(action_type):
                     povrezhdeniya_val = f['povrezhdeniya'].strip() or None
 
                     # 1. Закрываем договор
-                    cur.execute("UPDATE rental_agreement SET data_vozvrata_fact = CURRENT_DATE, status_oplaty = 'Оплачено' WHERE nomer_dogovora = %s RETURNING id_auto", (f['id_dogovor'],))
+                    cur.execute("UPDATE rental_agreement SET data_vozvrata_fact = CURRENT_DATE, status_oplaty = 'Paid' WHERE nomer_dogovora = %s RETURNING id_auto", (f['id_dogovor'],))
                     aid = cur.fetchone()[0]
                     
                     # 2. Создаем Акт Возврата (Return)
@@ -127,14 +127,30 @@ def handle_action(action_type):
                     # 3. Освобождаем авто
                     cur.execute("UPDATE automobile SET status = 'Available', tekuschiy_probeg = %s WHERE id_auto = %s", (f['probeg'], aid))
 
+                #elif action_type == 'add_client_phys':
+                #    cur.execute("INSERT INTO client (tip_clienta) VALUES ('Physical') RETURNING id_client")
+                #    cid = cur.fetchone()[0]
+                #    cur.execute("INSERT INTO client_physical (id_client, fio, telefon, pasport, adres_reg) VALUES (%s,%s,%s,%s,%s)", (cid, f['fio'], f['telefon'], f['pasport'], f['adres']))
                 elif action_type == 'add_client_phys':
-                    cur.execute("INSERT INTO client (tip_clienta) VALUES ('Физическое') RETURNING id_client")
+                # 1. Создаем ID в общей таблице (Исправили 'Физическое' на 'Physical', как договаривались)
+                    cur.execute("INSERT INTO client (tip_clienta) VALUES ('Physical') RETURNING id_client")
                     cid = cur.fetchone()[0]
-                    cur.execute("INSERT INTO client_physical (id_client, fio, telefon, pasport, adres_reg) VALUES (%s,%s,%s,%s,%s)", (cid, f['fio'], f['telefon'], f['pasport'], f['adres']))
+                    # 2. Записываем данные физлица
+                    # Добавили поля: data_rozhdeniya и vu_dannye
+                    # Если ВУ не ввели в форме, подставим 'Нет данных', чтобы база не ругалась
+                    vu_value = f.get('vu') or 'Нет данных'
+                    cur.execute("""INSERT INTO client_physical (id_client, fio, data_rozhdeniya, telefon, pasport, adres_reg, vu_dannye) VALUES (%s, %s, %s, %s, %s, %s, %s)""", (cid, f['fio'], f['data_rozhdeniya'], f['telefon'], f['pasport'], f['adres'], vu_value))
+                #elif action_type == 'add_client_legal':
+                #    cur.execute("INSERT INTO client (tip_clienta) VALUES ('Legal') RETURNING id_client")
+                #    cid = cur.fetchone()[0]
+                #    cur.execute("INSERT INTO client_legal (id_client, naimenovanie, inn_kpp, yur_adres, predstavitel) VALUES (%s,%s,%s,%s,%s)", (cid, f['naimenovanie'], f['inn_kpp'], f['yur_adres'], f['predstavitel']))
                 elif action_type == 'add_client_legal':
-                    cur.execute("INSERT INTO client (tip_clienta) VALUES ('Юридическое') RETURNING id_client")
+                # 1. Создаем ID (Исправили 'Юридическое' на 'Legal')
+                    cur.execute("INSERT INTO client (tip_clienta) VALUES ('Legal') RETURNING id_client")
                     cid = cur.fetchone()[0]
-                    cur.execute("INSERT INTO client_legal (id_client, naimenovanie, inn_kpp, yur_adres, predstavitel) VALUES (%s,%s,%s,%s,%s)", (cid, f['naimenovanie'], f['inn_kpp'], f['yur_adres'], f['predstavitel']))
+                    # 2. Записываем данные юрлица
+                    # Добавили колонку bank_rekvizity и значение f['bank_rekvizity']
+                    cur.execute("""INSERT INTO client_legal (id_client, naimenovanie, inn_kpp, yur_adres, bank_rekvizity, predstavitel) VALUES (%s, %s, %s, %s, %s, %s)""", (cid, f['naimenovanie'], f['inn_kpp'], f['yur_adres'], f['bank_rekvizity'], f['predstavitel']))
                 elif action_type == 'add_maintenance':
                     cur.execute("INSERT INTO maintenance (data_provedeniya, tip_rabot, probeg_moment, id_auto) VALUES (%s,%s,%s,%s)", (f['date'], f['work'], f['mileage'], f['auto']))
                     cur.execute("UPDATE automobile SET status = 'Maintenance', tekuschiy_probeg = %s WHERE id_auto = %s", (f['mileage'], f['auto']))

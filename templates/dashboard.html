@@ -164,12 +164,30 @@
 
     <!-- КЛИЕНТЫ -->
     <div class="tab-pane fade" id="clients">
-        <div class="row">
-            <div class="col-6"><div class="card p-3 shadow-sm"><h5>Физ. лицо</h5><form action="{{ url_for('handle_action', action_type='add_client_phys') }}" method="post">
-                <input name="fio" class="form-control mb-2" placeholder="ФИО"><input name="telefon" class="form-control mb-2" placeholder="Телефон"><input name="pasport" class="form-control mb-2" placeholder="Паспорт"><input name="adres" class="form-control mb-2" placeholder="Адрес"><button class="btn btn-primary w-100">Добавить</button>
-            </form></div></div>
+    <div class="row">
+        <div class="col-6">
+            <div class="card p-3 shadow-sm">
+                <h5>Физ. лицо</h5>
+                <form action="{{ url_for('handle_action', action_type='add_client_phys') }}" method="post">
+                    <input name="fio" class="form-control mb-2" placeholder="ФИО" required>
+                    
+                    <!-- НОВАЯ СТРОЧКА: Дата рождения -->
+                    <label class="small text-muted">Дата рождения</label>
+                    <input name="data_rozhdeniya" type="date" class="form-control mb-2" required>
+                    
+                    <input name="telefon" class="form-control mb-2" placeholder="Телефон">
+                    <input name="pasport" class="form-control mb-2" placeholder="Паспорт">
+                    <input name="adres" class="form-control mb-2" placeholder="Адрес">
+                    
+                    <!-- Желательно добавить и ВУ, так как в БД оно NOT NULL -->
+                    <input name="vu" class="form-control mb-2" placeholder="Водит. удостоверение (Серия Номер)">
+                    
+                    <button class="btn btn-primary w-100">Добавить</button>
+                </form>
+            </div>
+        </div>
             <div class="col-6"><div class="card p-3 shadow-sm"><h5>Юр. лицо</h5><form action="{{ url_for('handle_action', action_type='add_client_legal') }}" method="post">
-                <input name="naimenovanie" class="form-control mb-2" placeholder="Название"><input name="inn_kpp" class="form-control mb-2" placeholder="ИНН"><input name="yur_adres" class="form-control mb-2" placeholder="Адрес"><input name="predstavitel" class="form-control mb-2" placeholder="Представитель"><button class="btn btn-dark w-100">Добавить</button>
+                <input name="naimenovanie" class="form-control mb-2" placeholder="Название"><input name="inn_kpp" class="form-control mb-2" placeholder="ИНН"><input name="yur_adres" class="form-control mb-2" placeholder="Адрес"><input name="bank_rekvizity" class="form-control mb-2" placeholder="Банковские реквизиты (БИК, Р/С)"><input name="predstavitel" class="form-control mb-2" placeholder="Представитель"><button class="btn btn-dark w-100">Добавить</button>
             </form></div></div>
         </div>
     </div>

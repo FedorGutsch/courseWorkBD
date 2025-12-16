@@ -1,0 +1,44 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>Поиск автомобиля по гос. номеру</h2>
+<form action="{{ url_for('search_auto') }}" method="post" class="row g-3">
+    <div class="col-auto">
+      <input type="text" class="form-control" name="search_query" placeholder="Часть гос. номера" value="{{ query or '' }}" required>
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn btn-primary">Найти</button>
+    </div>
+</form>
+
+{% if results is not none %}
+<h3 class="mt-4">Результаты поиска:</h3>
+{% if results %}
+<div class="table-responsive">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Автомобиль</th>
+                <th>Гос. номер</th>
+                <th>Год</th>
+                <th>Статус</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in results %}
+            <tr>
+                <td>{{ row.id_auto }}</td>
+                <td><strong>{{ row.marka }} {{ row.model }}</strong></td>
+                <td><code>{{ row.gos_nomer }}</code></td>
+                <td>{{ row.god_vypuska }}</td>
+                <td><span class="badge bg-secondary">{{ row.status }}</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="mt-3">По вашему запросу ничего не найдено.</p>
+{% endif %}
+{% endif %}
+{% endblock %}

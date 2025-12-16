@@ -1,0 +1,25 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-5">
+        <div class="card shadow p-4">
+            <h3 class="text-center mb-4">Вход в систему</h3>
+            <form method="post" id="loginForm">
+                <div class="mb-3"><label class="form-label">Логин</label><input type="text" name="username" id="username" class="form-control" required></div>
+                <div class="mb-3"><label class="form-label">Пароль</label><input type="password" name="password" id="password" class="form-control" required></div>
+                <button type="submit" class="btn btn-primary w-100 py-2">Войти</button>
+            </form>
+            <hr class="my-4">
+            <p class="text-center small text-muted">Демо-вход:</p>
+            <div class="d-grid gap-2">
+                <button onclick="dl('director_boss','super_secret_pass')" class="btn btn-outline-dark btn-sm text-start">👔 Директор</button>
+                <button onclick="dl('manager_sergey','pass123')" class="btn btn-outline-primary btn-sm text-start">💼 Менеджер</button>
+                <button onclick="dl('mechanic_petrovich','fixcars')" class="btn btn-outline-warning btn-sm text-start">🛠 Механик</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    function dl(u, p) { document.getElementById('username').value=u; document.getElementById('password').value=p; document.getElementById('loginForm').submit(); }
+</script>
+{% endblock %}

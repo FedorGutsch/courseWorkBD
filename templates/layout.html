@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ERP Автопрокат</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f4f6f9; }
+        .card { border: none; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .nav-tabs .nav-link.active { font-weight: bold; border-top: 3px solid #0d6efd; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 shadow-sm">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="#">🚗 Автопрокат ERP</a>
+            {% if db_user %}
+            <div class="d-flex align-items-center text-white">
+                <div class="me-3 text-end lh-1">
+                    <div class="small opacity-75">Роль</div>
+                    <div class="fw-bold">{{ current_role }}</div>
+                </div>
+                <a href="{{ url_for('logout') }}" class="btn btn-light btn-sm text-primary fw-bold">Выход</a>
+            </div>
+            {% endif %}
+        </div>
+    </nav>
+
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleField(uid) {
+            let sel = document.getElementById(uid + '_select');
+            let inp = document.getElementById(uid + '_input');
+            if (inp.classList.contains('d-none')) {
+                inp.classList.remove('d-none'); sel.classList.add('d-none'); 
+                if (sel.value) inp.value = sel.value; inp.focus();
+            } else {
+                inp.classList.add('d-none'); sel.classList.remove('d-none'); sel.value = inp.value;
+            }
+        }
+        function syncInput(uid) {
+            document.getElementById(uid + '_input').value = document.getElementById(uid + '_select').value;
+        }
+        document.addEventListener("DOMContentLoaded", function() {
+            document.querySelectorAll('input[id$="_input"]').forEach(inp => {
+                let uid = inp.id.replace('_input', '');
+                let sel = document.getElementById(uid + '_select');
+                if (sel && inp.value) {
+                    let exists = Array.from(sel.options).some(o => o.value === inp.value);
+                    if (!exists) toggleField(uid); else sel.value = inp.value;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,213 @@
+{% extends "layout.html" %}
+{% from "_macros.html" import db_select %}
+{% from "_macros.html" import smart_input %}
+{% block content %}
+
+{% if current_role in ['Директор', 'Менеджер'] %}
+<div class="row mb-4 text-center">
+    <div class="col-4"><div class="card p-3 bg-success text-white shadow-sm"><h5>Выручка</h5><h3>{{ "{:,.0f}".format(data.revenue) }} ₽</h3></div></div>
+    <div class="col-4"><div class="card p-3 bg-primary text-white shadow-sm"><h5>В аренде</h5><h3>{{ data.active_rentals_count }}</h3></div></div>
+    <div class="col-4"><div class="card p-3 bg-secondary text-white shadow-sm"><h5>Автопарк</h5><h3>{{ data.cars|length }}</h3></div></div>
+</div>
+{% endif %}
+
+<ul class="nav nav-tabs mb-3" id="tabs" role="tablist">
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#cars">🚗 Автопарк</button></li>
+    {% if current_role in ['Директор', 'Менеджер'] %}
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#rent">📝 Аренда</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#clients">👥 Клиенты</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#history">📂 Архив</button></li>
+    {% endif %}
+    {% if current_role in ['Директор', 'Механик'] %}
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#maint">🛠 Сервис</button></li>
+    {% endif %}
+</ul>
+
+<div class="tab-content">
+    <!-- АВТОПАРК -->
+    <div class="tab-pane fade show active" id="cars">
+        {% if current_role in ['Директор', 'Менеджер'] %}
+        <div class="accordion mb-3"><div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#addCar">➕ Добавить авто</button></h2>
+        <div id="addCar" class="accordion-collapse collapse"><div class="accordion-body bg-light">
+            <form action="{{ url_for('handle_action', action_type='add_car') }}" method="post" class="row g-3">
+                {{ db_select('marka', 'Марка', DB_CHOICES.marka, suffix='new') }} 
+                {{ db_select('model', 'Модель', DB_CHOICES.model, suffix='new') }}
+                <div class="col-md-6"><label>Гос. номер</label><input name="gos_nomer" class="form-control" required></div>
+                <div class="col-md-6"><label>VIN</label><input name="vin" class="form-control" required></div>
+                <div class="col-md-3"><label>Год</label><input name="god_vypuska" type="number" class="form-control"></div>
+                <div class="col-md-3"><label>Мощность</label><input name="moschnost" type="number" class="form-control"></div>
+                {{ db_select('color', 'Цвет', DB_CHOICES.color, suffix='new') }} 
+                {{ db_select('kuzov', 'Кузов', DB_CHOICES.kuzov, suffix='new') }}
+                {{ db_select('transmissiya', 'КПП', DB_CHOICES.transmissiya, suffix='new') }} 
+                {{ db_select('toplivo', 'Топливо', DB_CHOICES.toplivo, suffix='new') }}
+                <div class="col-md-6"><label>Цена/сутки</label><input name="stoimost_sutki" type="number" class="form-control" required></div>
+                <div class="col-md-6"><label>Залог</label><input name="zalog" type="number" class="form-control" required></div>
+                <div class="col-12"><button type="submit" class="btn btn-primary">Сохранить</button></div>
+            </form>
+        </div></div></div></div>
+        {% endif %}
+        
+        <table class="table table-hover align-middle">
+            <thead class="table-light"><tr><th>Авто</th><th>Номер</th><th>Статус</th><th>Пробег</th><th>Цена</th><th>Действия</th></tr></thead>
+            <tbody>
+            {% for c in data.cars %}
+            <tr>
+                <td>{{ c.marka }} {{ c.model }}<br><small class="text-muted">{{ c.god_vypuska }}</small></td>
+                <td>{{ c.gos_nomer }}</td>
+                <td><span class="badge bg-{{ 'success' if c.status=='Available' else 'primary' if c.status=='Rented' else 'secondary' }}">{{ c.status }}</span></td>
+                <td>{{ c.tekuschiy_probeg }}</td>
+                <td>{{ c.stoimost_sutki }}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editCar{{ c.id_auto }}">✏️</button>
+                    {% if current_role in ['Директор', 'Менеджер'] %}
+                    <form action="{{ url_for('delete_car', id=c.id_auto) }}" method="post" class="d-inline" onsubmit="return confirm('Удалить?');"><button class="btn btn-sm btn-outline-danger">🗑</button></form>
+                    {% endif %}
+                </td>
+            </tr>
+            <!-- МОДАЛКА РЕДАКТИРОВАНИЯ -->
+            <div class="modal fade" id="editCar{{ c.id_auto }}" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Редактировать</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body">
+                <form action="{{ url_for('edit_car', id=c.id_auto) }}" method="post" class="row g-3">
+                    {{ db_select('marka', 'Марка', DB_CHOICES.marka, c.marka, suffix=c.id_auto) }}
+                    {{ db_select('model', 'Модель', DB_CHOICES.model, c.model, suffix=c.id_auto) }}
+                    <div class="col-6"><label>Гос. номер</label><input name="gos_nomer" value="{{ c.gos_nomer }}" class="form-control"></div>
+                    <div class="col-6"><label>VIN</label><input name="vin" value="{{ c.vin }}" class="form-control"></div>
+                    <div class="col-3"><label>Год</label><input name="god_vypuska" value="{{ c.god_vypuska }}" type="number" class="form-control"></div>
+                    <div class="col-3"><label>Мощность</label><input name="moschnost" value="{{ c.moschnost }}" type="number" class="form-control"></div>
+                    {{ db_select('color', 'Цвет', DB_CHOICES.color, c.color, suffix=c.id_auto) }}
+                    {{ db_select('kuzov', 'Кузов', DB_CHOICES.kuzov, c.kuzov, suffix=c.id_auto) }}
+                    {{ db_select('transmissiya', 'КПП', DB_CHOICES.transmissiya, c.transmissiya, suffix=c.id_auto) }}
+                    {{ db_select('toplivo', 'Топливо', DB_CHOICES.toplivo, c.toplivo, suffix=c.id_auto) }}
+                    <div class="col-6"><label>Статус</label><select name="status" class="form-select"><option value="Available" {% if c.status=='Available' %}selected{% endif %}>Available</option><option value="Rented" {% if c.status=='Rented' %}selected{% endif %}>Rented</option><option value="Maintenance" {% if c.status=='Maintenance' %}selected{% endif %}>Maintenance</option></select></div>
+                    <div class="col-3"><label>Цена</label><input name="stoimost_sutki" value="{{ c.stoimost_sutki }}" type="number" class="form-control"></div>
+                    <div class="col-3"><label>Залог</label><input name="zalog" value="{{ c.zalog }}" type="number" class="form-control"></div>
+                    <div class="col-12"><button type="submit" class="btn btn-primary w-100">Сохранить</button></div>
+                </form>
+            </div></div></div></div>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- АРЕНДА -->
+    {% if current_role in ['Директор', 'Менеджер'] %}
+    <div class="tab-pane fade" id="rent">
+        <div class="row">
+            <!-- ВЫДАЧА (ISSUE) -->
+            <div class="col-5"><div class="card p-3 border-success shadow-sm"><h5>📤 Выдача (Issue)</h5>
+                <form action="{{ url_for('handle_action', action_type='create_rent') }}" method="post">
+                    <label class="small">Клиент</label>
+                    <select name="client" class="form-select mb-2" required>
+                        <optgroup label="Физ.">{% for c in data.clients_phys %}<option value="{{ c.id_client }}">{{ c.fio }}</option>{% endfor %}</optgroup>
+                        <optgroup label="Юр.">{% for c in data.clients_legal %}<option value="{{ c.id_client }}">{{ c.naimenovanie }}</option>{% endfor %}</optgroup>
+                    </select>
+                    <label class="small">Авто</label>
+                    <select name="auto" class="form-select mb-2" required id="issue_auto_select">
+                        <option value="" disabled selected>-- Выберите авто --</option>
+                        {% for c in data.cars if c.status=='Available' %}
+                        <option value="{{ c.id_auto }}" data-probeg="{{ c.tekuschiy_probeg }}">{{ c.marka }} {{ c.model }} | {{ c.gos_nomer }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="row g-2 mb-2">
+                        <div class="col"><label class="small">Начало</label><input type="date" name="start" class="form-control" required></div>
+                        <div class="col"><label class="small">Конец</label><input type="date" name="end" class="form-control" required></div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col"><label class="small">Пробег</label><input type="number" name="probeg" id="issue_probeg" class="form-control" required></div>
+                        <div class="col"><label class="small">Топливо %</label><input type="number" name="toplivo_level" class="form-control" value="100" required></div>
+                    </div>
+                    <!-- ЧИСТОТА: ТЕПЕРЬ ТЕКСТОВОЕ ПОЛЕ -->
+                    <label class="small">Чистота</label>
+                    <input type="text" name="chistota" class="form-control mb-2" placeholder="Состояние (пусто = NULL)">
+                    
+                    <input name="price" type="number" class="form-control mb-3" placeholder="Сумма договора" required>
+                    <button class="btn btn-success w-100">Оформить выдачу</button>
+                </form>
+            </div></div>
+
+            <!-- ВОЗВРАТ (RETURN) -->
+            <div class="col-7"><div class="card p-3 border-danger shadow-sm"><h5>📥 Возврат (Return)</h5>
+                <table class="table table-sm align-middle">
+                    <thead><tr><th>Авто</th><th>Клиент</th><th>Действие</th></tr></thead>
+                    <tbody>
+                    {% for r in data.active_rentals %}
+                    <tr>
+                        <td>{{ r.marka }} {{ r.model }}</td>
+                        <td>{{ r.client_name }}</td>
+                        <td><button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#returnModal{{ r.nomer_dogovora }}">Принять</button></td>
+                    </tr>
+                    <!-- МОДАЛКА ВОЗВРАТА -->
+                    <div class="modal fade" id="returnModal{{ r.nomer_dogovora }}" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+                        <div class="modal-header"><h5 class="modal-title">Акт возврата №{{ r.nomer_dogovora }}</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+                        <form action="{{ url_for('handle_action', action_type='close_rent') }}" method="post">
+                            <div class="modal-body">
+                                <input type="hidden" name="id_dogovor" value="{{ r.nomer_dogovora }}">
+                                <div class="mb-3"><label class="form-label">Пробег при возврате (Был: {{ r.tekuschiy_probeg }})</label>
+                                <input type="number" name="probeg" class="form-control" value="{{ r.tekuschiy_probeg }}" required></div>
+                                <div class="row mb-3">
+                                    <div class="col"><label class="form-label">Топливо %</label><input type="number" name="toplivo_level" class="form-control" required></div>
+                                    <!-- ЧИСТОТА: ТЕПЕРЬ ТЕКСТОВОЕ ПОЛЕ -->
+                                    <div class="col"><label class="form-label">Чистота</label><input type="text" name="chistota" class="form-control" placeholder="Состояние"></div>
+                                </div>
+                                <div class="mb-3"><label class="form-label">Повреждения (если есть)</label><textarea name="povrezhdeniya" class="form-control" rows="2"></textarea></div>
+                            </div>
+                            <div class="modal-footer"><button type="submit" class="btn btn-danger w-100">Закрыть договор и принять авто</button></div>
+                        </form>
+                    </div></div></div>
+                    {% else %}
+                    <tr><td colspan="3" class="text-center text-muted py-3">Нет активных аренд</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div></div>
+        </div>
+    </div>
+
+    <!-- КЛИЕНТЫ -->
+    <div class="tab-pane fade" id="clients">
+        <div class="row">
+            <div class="col-6"><div class="card p-3 shadow-sm"><h5>Физ. лицо</h5><form action="{{ url_for('handle_action', action_type='add_client_phys') }}" method="post">
+                <input name="fio" class="form-control mb-2" placeholder="ФИО"><input name="telefon" class="form-control mb-2" placeholder="Телефон"><input name="pasport" class="form-control mb-2" placeholder="Паспорт"><input name="adres" class="form-control mb-2" placeholder="Адрес"><button class="btn btn-primary w-100">Добавить</button>
+            </form></div></div>
+            <div class="col-6"><div class="card p-3 shadow-sm"><h5>Юр. лицо</h5><form action="{{ url_for('handle_action', action_type='add_client_legal') }}" method="post">
+                <input name="naimenovanie" class="form-control mb-2" placeholder="Название"><input name="inn_kpp" class="form-control mb-2" placeholder="ИНН"><input name="yur_adres" class="form-control mb-2" placeholder="Адрес"><input name="predstavitel" class="form-control mb-2" placeholder="Представитель"><button class="btn btn-dark w-100">Добавить</button>
+            </form></div></div>
+        </div>
+    </div>
+
+    <!-- АРХИВ -->
+    <div class="tab-pane fade" id="history">
+        <div class="card shadow-sm"><div class="card-body">
+        <table class="table table-sm table-hover"><thead><tr><th>№</th><th>Авто</th><th>Возврат</th><th>Сумма</th></tr></thead><tbody>
+        {% for h in data.history %}<tr><td>{{ h.nomer_dogovora }}</td><td>{{ h.marka }} {{ h.model }}</td><td>{{ h.data_vozvrata_fact }}</td><td>{{ h.stoimost_obschaya }}</td></tr>{% endfor %}
+        </tbody></table>
+        </div></div>
+    </div>
+    {% endif %}
+
+    <!-- СЕРВИС -->
+    {% if current_role in ['Директор', 'Механик'] %}
+    <div class="tab-pane fade" id="maint">
+        <div class="card p-3 border-warning mb-3 shadow-sm"><h5>Запись ТО</h5>
+            <form action="{{ url_for('handle_action', action_type='add_maintenance') }}" method="post" class="row g-2">
+                <div class="col-4"><select name="auto" class="form-select">{% for c in data.cars %}<option value="{{ c.id_auto }}">{{ c.marka }} {{ c.model }}</option>{% endfor %}</select></div>
+                <div class="col-2"><input type="date" name="date" class="form-control" required></div>
+                <div class="col-4"><input name="work" class="form-control" placeholder="Работы" required></div>
+                <div class="col-2"><input name="mileage" type="number" class="form-control" placeholder="Пробег" required></div>
+                <button class="btn btn-warning w-100">Записать</button>
+            </form>
+        </div>
+        <table class="table table-sm align-middle"><thead><tr><th>Дата</th><th>Авто</th><th>Работы</th><th>Пробег</th></tr></thead><tbody>
+        {% for m in data.maintenance_history %}<tr><td>{{ m.data_provedeniya }}</td><td>{{ m.marka }} {{ m.model }}</td><td>{{ m.tip_rabot }}</td><td>{{ m.probeg_moment }}</td></tr>{% endfor %}
+        </tbody></table>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    document.getElementById('issue_auto_select').addEventListener('change', function() {
+        let probeg = this.options[this.selectedIndex].getAttribute('data-probeg');
+        document.getElementById('issue_probeg').value = probeg;
+    });
+</script>
+
+{% endblock %}

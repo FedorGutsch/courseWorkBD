@@ -1,0 +1,12 @@
+{% extends "layout.html" %}
+{% block content %}
+    <div class="pb-2 mb-4 border-bottom">
+        <h2>Редактировать автомобиль: {{ auto.marka }} {{ auto.model }}</h2>
+    </div>
+    <form class="needs-validation" action="{{ url_for('edit_automobile', id=auto.id_auto) }}" method="post">
+        {# Передаем объект `auto` в наш общий шаблон формы #}
+        {% include '_form.html' with context %}
+        <hr class="my-4">
+        <button class="w-100 btn btn-primary btn-lg" type="submit">Сохранить изменения</button>
+    </form>
+{% endblock %}

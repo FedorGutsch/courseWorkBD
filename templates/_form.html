@@ -1,0 +1,134 @@
+{# 
+  Шаблон формы. 
+  1. Большинство полей - умные списки с кнопкой [+] (макрос smart_field).
+  2. СТАТУС - строгий список без возможности ввода своего значения.
+#}
+
+<div class="row g-3">
+    
+    <!-- МАКРОС для полей с возможностью добавления своего значения (Марка, Модель и т.д.) -->
+    {% macro smart_field(field_name, label_text, choices_list, current_value) %}
+    <div class="col-md-4">
+        <label for="{{ field_name }}" class="form-label">{{ label_text }}</label>
+        <div class="input-group">
+            <!-- Выпадающий список -->
+            <select class="form-select" id="{{ field_name }}_select" onchange="syncInput('{{ field_name }}')">
+                <option value="" disabled selected>-- Выберите --</option>
+                {% for item in choices_list %}
+                <option value="{{ item }}" {% if current_value == item %}selected{% endif %}>{{ item }}</option>
+                {% endfor %}
+            </select>
+            
+            <!-- Текстовое поле (скрыто по умолчанию) -->
+            <input type="text" class="form-control d-none" id="{{ field_name }}_input" name="{{ field_name }}" value="{{ current_value }}" required>
+            
+            <!-- Кнопка переключения -->
+            <button class="btn btn-outline-secondary" type="button" onclick="toggleField('{{ field_name }}')" title="Добавить новое значение">+</button>
+        </div>
+    </div>
+    {% endmacro %}
+
+    <!-- === УМНЫЕ ПОЛЯ (Можно выбрать или ввести свое) === -->
+    {{ smart_field('marka', 'Марка', DB_CHOICES.marka, auto.marka if auto else '') }}
+    {{ smart_field('model', 'Модель', DB_CHOICES.model, auto.model if auto else '') }}
+    
+    <div class="col-md-4">
+        <label for="god_vypuska" class="form-label">Год выпуска</label>
+        <input type="number" class="form-control" id="god_vypuska" name="god_vypuska" value="{{ auto.god_vypuska if auto else '' }}" required>
+    </div>
+
+    <div class="col-md-6">
+        <label for="gos_nomer" class="form-label">Гос. номер</label>
+        <input type="text" class="form-control" id="gos_nomer" name="gos_nomer" value="{{ auto.gos_nomer if auto else '' }}" required>
+    </div>
+    <div class="col-md-6">
+        <label for="vin" class="form-label">VIN</label>
+        <input type="text" class="form-control" id="vin" name="vin" value="{{ auto.vin if auto else '' }}" required minlength="17" maxlength="17">
+    </div>
+
+    {{ smart_field('transmissiya', 'Трансмиссия', DB_CHOICES.transmissiya, auto.transmissiya if auto else '') }}
+    {{ smart_field('kuzov', 'Кузов', DB_CHOICES.kuzov, auto.kuzov if auto else '') }}
+    {{ smart_field('toplivo', 'Топливо', DB_CHOICES.toplivo, auto.toplivo if auto else '') }}
+    {{ smart_field('color', 'Цвет', DB_CHOICES.color, auto.color if auto else '') }}
+
+    <div class="col-md-4">
+        <label for="moschnost" class="form-label">Мощность (л.с.)</label>
+        <input type="number" class="form-control" id="moschnost" name="moschnost" value="{{ auto.moschnost if auto else '' }}">
+    </div>
+
+    <div class="col-md-4">
+        <label for="tekuschiy_probeg" class="form-label">Пробег (км)</label>
+        <input type="number" class="form-control" id="tekuschiy_probeg" name="tekuschiy_probeg" value="{{ auto.tekuschiy_probeg if auto else '0' }}">
+    </div>
+
+    <!-- === СТРОГОЕ ПОЛЕ СТАТУС (Только выбор из списка) === -->
+    <div class="col-md-4">
+        <label for="status" class="form-label">Статус</label>
+        <select class="form-select" id="status" name="status" required>
+            <option value="" disabled {% if not auto %}selected{% endif %}>-- Выберите статус --</option>
+            {% for s in DB_CHOICES.status %}
+            <option value="{{ s }}" {% if auto and auto.status == s %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="col-md-6">
+        <label for="stoimost_sutki" class="form-label">Стоимость/сутки (₽)</label>
+        <input type="number" step="0.01" class="form-control" id="stoimost_sutki" name="stoimost_sutki" value="{{ auto.stoimost_sutki if auto else '' }}" required>
+    </div>
+    <div class="col-md-6">
+        <label for="zalog" class="form-label">Залог (₽)</label>
+        <input type="number" step="0.01" class="form-control" id="zalog" name="zalog" value="{{ auto.zalog if auto else '' }}">
+    </div>
+</div>
+
+<script>
+    // Функция переключения между Списком и Текстом (только для smart_field)
+    function toggleField(fieldName) {
+        const select = document.getElementById(fieldName + '_select');
+        const input = document.getElementById(fieldName + '_input');
+        
+        if (input.classList.contains('d-none')) {
+            input.classList.remove('d-none');
+            select.classList.add('d-none');
+            input.focus();
+            input.value = ''; 
+        } else {
+            input.classList.add('d-none');
+            select.classList.remove('d-none');
+            select.value = input.value; 
+        }
+    }
+
+    // Синхронизация выбора в списке с скрытым полем ввода
+    function syncInput(fieldName) {
+        const select = document.getElementById(fieldName + '_select');
+        const input = document.getElementById(fieldName + '_input');
+        input.value = select.value;
+    }
+
+    // Инициализация при загрузке
+    document.addEventListener("DOMContentLoaded", function() {
+        const selects = document.querySelectorAll('[id$="_select"]');
+        selects.forEach(select => {
+            const fieldName = select.id.replace('_select', '');
+            const input = document.getElementById(fieldName + '_input');
+            
+            // Если поля статус нет в списке smart_field, пропускаем его (у него нет _input)
+            if (!input) return;
+
+            let valueFound = false;
+            for (let i = 0; i < select.options.length; i++) {
+                if (select.options[i].value === input.value) {
+                    select.selectedIndex = i;
+                    valueFound = true;
+                    break;
+                }
+            }
+            
+            if (!valueFound && input.value !== '') {
+                toggleField(fieldName);
+            }
+        });
+    });
+</script>

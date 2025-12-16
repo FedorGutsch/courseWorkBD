@@ -1,0 +1,50 @@
+{% macro smart_input(name, label, choices, value='', suffix='') %}
+{# Уникальный ID для JS #}
+{% set uid = name + '_' + (suffix|string) if suffix else name %}
+
+<div class="col-md-6">
+    <label class="form-label">{{ label }}</label>
+    <div class="input-group">
+        <!-- Выпадающий список из БД -->
+        <select class="form-select" id="{{ uid }}_select" onchange="syncInput('{{ uid }}')">
+            <option value="" disabled {% if not value %}selected{% endif %}>Выбрать...</option>
+            {% for item in choices %}
+            <option value="{{ item }}" {% if value == item %}selected{% endif %}>{{ item }}</option>
+            {% endfor %}
+            <!-- Если значения нет в списке, добавляем его -->
+            {% if value and value not in choices %}
+            <option value="{{ value }}" selected>{{ value }}</option>
+            {% endif %}
+        </select>
+        
+        <!-- Поле для ручного ввода -->
+        <input type="text" class="form-control d-none" id="{{ uid }}_input" name="{{ name }}" value="{{ value }}" required>
+        
+        <!-- Кнопка переключения -->
+        <button class="btn btn-outline-secondary" type="button" onclick="toggleField('{{ uid }}')" title="Вручную">
+            <i class="bi bi-pencil"></i>
+        </button>
+    </div>
+</div>
+{% endmacro %}
+
+{% macro db_select(name, label, choices, value='', suffix='') %}
+{# Генерируем уникальный ID #}
+{% set uid = name + '_' + (suffix|string) if suffix else name %}
+
+<div class="col-md-6">
+    <label class="form-label">{{ label }}</label>
+    <select class="form-select" name="{{ name }}" id="{{ uid }}" required>
+        <option value="" disabled {% if not value %}selected{% endif %}>Выберите...</option>
+        
+        {% for item in choices %}
+        <option value="{{ item }}" {% if value == item %}selected{% endif %}>{{ item }}</option>
+        {% endfor %}
+        
+        {# Если текущего значения нет в списке (например, старая запись), добавляем его #}
+        {% if value and value not in choices %}
+        <option value="{{ value }}" selected>{{ value }}</option>
+        {% endif %}
+    </select>
+</div>
+{% endmacro %}

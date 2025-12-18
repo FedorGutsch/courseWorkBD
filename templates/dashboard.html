@@ -11,21 +11,39 @@
 </div>
 {% endif %}
 
+<!-- НАВИГАЦИЯ (ВКЛАДКИ) -->
 <ul class="nav nav-tabs mb-3" id="tabs" role="tablist">
-    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#cars">🚗 Автопарк</button></li>
+    <!-- Вкладка АВТОПАРК: Активна, только если поиск НЕ запускался (is none) -->
+    <li class="nav-item">
+        <button class="nav-link {% if session.get('search_results') is none %}active{% endif %}" 
+                data-bs-toggle="tab" data-bs-target="#cars">
+            🚗 Автопарк
+        </button>
+    </li>
+    
     {% if current_role in ['Директор', 'Менеджер'] %}
     <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#rent">📝 Аренда</button></li>
     <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#clients">👥 Клиенты</button></li>
     <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#history">📂 Архив</button></li>
     {% endif %}
+    
     {% if current_role in ['Директор', 'Механик'] %}
     <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#maint">🛠 Сервис</button></li>
     {% endif %}
+    
+    <!-- Вкладка ПОИСК: Активна, если поиск БЫЛ (даже если результат пустой) -->
+    <li class="nav-item">
+        <button class="nav-link {% if session.get('search_results') is not none %}active{% endif %}" 
+                data-bs-toggle="tab" data-bs-target="#search_tab">
+            🔍 Поиск
+        </button>
+    </li>
 </ul>
 
 <div class="tab-content">
-    <!-- АВТОПАРК -->
-    <div class="tab-pane fade show active" id="cars">
+    
+    <!-- === АВТОПАРК === -->
+    <div class="tab-pane fade {% if session.get('search_results') is none %}show active{% endif %}" id="cars">
         {% if current_role in ['Директор', 'Менеджер'] %}
         <div class="accordion mb-3"><div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#addCar">➕ Добавить авто</button></h2>
         <div id="addCar" class="accordion-collapse collapse"><div class="accordion-body bg-light">
@@ -88,11 +106,11 @@
         </table>
     </div>
 
-    <!-- АРЕНДА -->
+    <!-- === АРЕНДА === -->
     {% if current_role in ['Директор', 'Менеджер'] %}
     <div class="tab-pane fade" id="rent">
         <div class="row">
-            <!-- ВЫДАЧА (ISSUE) -->
+            <!-- ВЫДАЧА -->
             <div class="col-5"><div class="card p-3 border-success shadow-sm"><h5>📤 Выдача (Issue)</h5>
                 <form action="{{ url_for('handle_action', action_type='create_rent') }}" method="post">
                     <label class="small">Клиент</label>
@@ -115,16 +133,14 @@
                         <div class="col"><label class="small">Пробег</label><input type="number" name="probeg" id="issue_probeg" class="form-control" required></div>
                         <div class="col"><label class="small">Топливо %</label><input type="number" name="toplivo_level" class="form-control" value="100" required></div>
                     </div>
-                    <!-- ЧИСТОТА: ТЕПЕРЬ ТЕКСТОВОЕ ПОЛЕ -->
                     <label class="small">Чистота</label>
                     <input type="text" name="chistota" class="form-control mb-2" placeholder="Состояние (пусто = NULL)">
-                    
                     <input name="price" type="number" class="form-control mb-3" placeholder="Сумма договора" required>
                     <button class="btn btn-success w-100">Оформить выдачу</button>
                 </form>
             </div></div>
 
-            <!-- ВОЗВРАТ (RETURN) -->
+            <!-- ВОЗВРАТ -->
             <div class="col-7"><div class="card p-3 border-danger shadow-sm"><h5>📥 Возврат (Return)</h5>
                 <table class="table table-sm align-middle">
                     <thead><tr><th>Авто</th><th>Клиент</th><th>Действие</th></tr></thead>
@@ -135,7 +151,6 @@
                         <td>{{ r.client_name }}</td>
                         <td><button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#returnModal{{ r.nomer_dogovora }}">Принять</button></td>
                     </tr>
-                    <!-- МОДАЛКА ВОЗВРАТА -->
                     <div class="modal fade" id="returnModal{{ r.nomer_dogovora }}" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
                         <div class="modal-header"><h5 class="modal-title">Акт возврата №{{ r.nomer_dogovora }}</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
                         <form action="{{ url_for('handle_action', action_type='close_rent') }}" method="post">
@@ -145,7 +160,6 @@
                                 <input type="number" name="probeg" class="form-control" value="{{ r.tekuschiy_probeg }}" required></div>
                                 <div class="row mb-3">
                                     <div class="col"><label class="form-label">Топливо %</label><input type="number" name="toplivo_level" class="form-control" required></div>
-                                    <!-- ЧИСТОТА: ТЕПЕРЬ ТЕКСТОВОЕ ПОЛЕ -->
                                     <div class="col"><label class="form-label">Чистота</label><input type="text" name="chistota" class="form-control" placeholder="Состояние"></div>
                                 </div>
                                 <div class="mb-3"><label class="form-label">Повреждения (если есть)</label><textarea name="povrezhdeniya" class="form-control" rows="2"></textarea></div>
@@ -162,37 +176,31 @@
         </div>
     </div>
 
-    <!-- КЛИЕНТЫ -->
+    <!-- === КЛИЕНТЫ === -->
     <div class="tab-pane fade" id="clients">
-    <div class="row">
-        <div class="col-6">
-            <div class="card p-3 shadow-sm">
-                <h5>Физ. лицо</h5>
-                <form action="{{ url_for('handle_action', action_type='add_client_phys') }}" method="post">
-                    <input name="fio" class="form-control mb-2" placeholder="ФИО" required>
-                    
-                    <!-- НОВАЯ СТРОЧКА: Дата рождения -->
-                    <label class="small text-muted">Дата рождения</label>
-                    <input name="data_rozhdeniya" type="date" class="form-control mb-2" required>
-                    
-                    <input name="telefon" class="form-control mb-2" placeholder="Телефон">
-                    <input name="pasport" class="form-control mb-2" placeholder="Паспорт">
-                    <input name="adres" class="form-control mb-2" placeholder="Адрес">
-                    
-                    <!-- Желательно добавить и ВУ, так как в БД оно NOT NULL -->
-                    <input name="vu" class="form-control mb-2" placeholder="Водит. удостоверение (Серия Номер)">
-                    
-                    <button class="btn btn-primary w-100">Добавить</button>
-                </form>
+        <div class="row">
+            <div class="col-6">
+                <div class="card p-3 shadow-sm">
+                    <h5>Физ. лицо</h5>
+                    <form action="{{ url_for('handle_action', action_type='add_client_phys') }}" method="post">
+                        <input name="fio" class="form-control mb-2" placeholder="ФИО" required>
+                        <label class="small text-muted">Дата рождения</label>
+                        <input name="data_rozhdeniya" type="date" class="form-control mb-2" required>
+                        <input name="telefon" class="form-control mb-2" placeholder="Телефон">
+                        <input name="pasport" class="form-control mb-2" placeholder="Паспорт">
+                        <input name="adres" class="form-control mb-2" placeholder="Адрес">
+                        <input name="vu" class="form-control mb-2" placeholder="Водит. удостоверение">
+                        <button class="btn btn-primary w-100">Добавить</button>
+                    </form>
+                </div>
             </div>
-        </div>
             <div class="col-6"><div class="card p-3 shadow-sm"><h5>Юр. лицо</h5><form action="{{ url_for('handle_action', action_type='add_client_legal') }}" method="post">
-                <input name="naimenovanie" class="form-control mb-2" placeholder="Название"><input name="inn_kpp" class="form-control mb-2" placeholder="ИНН"><input name="yur_adres" class="form-control mb-2" placeholder="Адрес"><input name="bank_rekvizity" class="form-control mb-2" placeholder="Банковские реквизиты (БИК, Р/С)"><input name="predstavitel" class="form-control mb-2" placeholder="Представитель"><button class="btn btn-dark w-100">Добавить</button>
+                <input name="naimenovanie" class="form-control mb-2" placeholder="Название"><input name="inn_kpp" class="form-control mb-2" placeholder="ИНН"><input name="yur_adres" class="form-control mb-2" placeholder="Адрес"><input name="bank_rekvizity" class="form-control mb-2" placeholder="Банковские реквизиты"><input name="predstavitel" class="form-control mb-2" placeholder="Представитель"><button class="btn btn-dark w-100">Добавить</button>
             </form></div></div>
         </div>
     </div>
 
-    <!-- АРХИВ -->
+    <!-- === АРХИВ === -->
     <div class="tab-pane fade" id="history">
         <div class="card shadow-sm"><div class="card-body">
         <table class="table table-sm table-hover"><thead><tr><th>№</th><th>Авто</th><th>Возврат</th><th>Сумма</th></tr></thead><tbody>
@@ -202,7 +210,7 @@
     </div>
     {% endif %}
 
-    <!-- СЕРВИС -->
+    <!-- === СЕРВИС === -->
     {% if current_role in ['Директор', 'Механик'] %}
     <div class="tab-pane fade" id="maint">
         <div class="card p-3 border-warning mb-3 shadow-sm"><h5>Запись ТО</h5>
@@ -219,6 +227,38 @@
         </tbody></table>
     </div>
     {% endif %}
+
+    <!-- === ПОИСК === -->
+    <!-- Класс show active добавляется, если переменная search_results НЕ равна None -->
+    <div class="tab-pane fade {% if session.get('search_results') is not none %}show active{% endif %}" id="search_tab">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Поиск по Гос. номеру</h5>
+                <form action="{{ url_for('search_car') }}" method="post" class="d-flex gap-2">
+                    <input type="text" name="search_query" class="form-control" placeholder="Введите номер..." value="{{ session.get('search_query', '') }}" required>
+                    <button type="submit" class="btn btn-primary">Найти</button>
+                    <a href="{{ url_for('search_car') }}" class="btn btn-outline-secondary">Сброс</a>
+                </form>
+            </div>
+        </div>
+
+        {% if session.get('search_results') is not none %}
+            <h5>Результаты:</h5>
+            {% if session.get('search_results') %}
+            <table class="table table-bordered table-hover">
+                <thead class="table-light"><tr><th>Марка</th><th>Модель</th><th>Гос. номер</th><th>VIN</th><th>Статус</th></tr></thead>
+                <tbody>
+                    {% for car in session.get('search_results') %}
+                    <tr><td>{{ car.marka }}</td><td>{{ car.model }}</td><td>{{ car.gos_nomer }}</td><td>{{ car.vin }}</td><td>{{ car.status }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+                <div class="alert alert-warning">Ничего не найдено.</div>
+            {% endif %}
+        {% endif %}
+    </div>
+
 </div>
 
 <script>

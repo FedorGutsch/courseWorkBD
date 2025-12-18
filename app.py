@@ -1,6 +1,6 @@
 import psycopg2
 from psycopg2.extras import DictCursor
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from config import db_host_config
 
 app = Flask(__name__)
@@ -182,5 +182,34 @@ def delete_car(id):
     except Exception as e: flash(f'Ошибка удаления: {e}', 'danger')
     return redirect(url_for('dashboard'))
 
+# --- ПОИСК ЧЕРЕЗ AJAX (БЕЗ ПЕРЕЗАГРУЗКИ) ---
+# --- ПОИСК (ИСПРАВЛЕННЫЙ) ---
+@app.route('/search', methods=['POST'])
+def search_car():
+    conn = get_db_connection()
+    # ИСПРАВЛЕНИЕ: Берем данные из формы, а не из JSON
+    query = request.form.get('search_query', '') 
+    
+    results = []
+    try:
+        with conn:
+            with conn.cursor(cursor_factory=DictCursor) as cur:
+                cur.execute("SELECT * FROM search_automobile_by_plate(%s)", (query,))
+                results = cur.fetchall()
+    except Exception as e: 
+        flash(f'Ошибка поиска: {e}', 'danger')
+    
+    # Сохраняем результаты в сессию, чтобы показать их после перезагрузки
+    session['search_results'] = [dict(row) for row in results]
+    session['search_query'] = query
+    
+    return redirect(url_for('dashboard'))
+
+@app.route('/clear_search')
+def clear_search():
+    session.pop('search_results', None)
+    session.pop('search_query', None)
+    return redirect(url_for('dashboard'))
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5000)
